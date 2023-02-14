@@ -73,11 +73,13 @@ namespace MentorBot.Discord
                     _logger.Log(LogLevel.Debug, arg.Exception, arg.Message);
                     break;
             }
+            Console.WriteLine($"Log message received: {arg.Message}");
             return Task.CompletedTask;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            Console.WriteLine("Starting Discord context.");
             await Client.LoginAsync(TokenType.Bot, _options.Token);
             await Client.StartAsync();
             Channel = await Client.Rest.GetChannelAsync(_options.Channel) as ITextChannel;
@@ -85,6 +87,7 @@ namespace MentorBot.Discord
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            Console.WriteLine("Stopping Discord context.");
             await Client.StopAsync();
             await Client.LogoutAsync();
         }
@@ -100,6 +103,7 @@ namespace MentorBot.Discord
             {
                 throw new InvalidOperationException("channel not bound to discord context.");
             }
+            Console.WriteLine($"Sending message to channel {Channel.Name}.");
             var msg = await Channel.SendMessageAsync(embed: embed, options: new RequestOptions
             {
                 CancelToken = cancellationToken
