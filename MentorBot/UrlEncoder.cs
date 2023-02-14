@@ -10,7 +10,9 @@ namespace MentorBot
   {
     public static string Encode<TValue>(TValue o, JsonSerializerOptions? serializerOptions = null)
     {
+      // Serialize the value to a JSON node
       var node = JsonSerializer.SerializeToNode(o, serializerOptions);
+      // Select all key-value pairs in the JSON object and filter out any null values
       var fields = node?.AsObject()
         .Select(kvp => KeyValuePair.Create(kvp.Key, kvp.Value?.ToString()))
         .Where(kvp => kvp.Value != null);
@@ -25,6 +27,7 @@ namespace MentorBot
       {
         obj.Add(field.Key, field.Value.ToString());
       }
+      // Deserialize the JSON object into a value of type TValue
       return JsonSerializer.Deserialize<TValue>(obj, serializerOptions);
     }
   }
