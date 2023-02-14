@@ -6,6 +6,7 @@ namespace MentorBot
 {
   public static class ServiceProviderExtensions
   {
+        // This class extends the IServiceProvider interface to provide extension methods for creating scoped services.
     public static async ValueTask WithScopedServiceAsync<TService>(this IServiceProvider provider, Func<TService, ValueTask> body) where TService : notnull
     {
       using var scope = provider.CreateScope();

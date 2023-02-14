@@ -3,7 +3,8 @@ using System.Security.Cryptography;
 
 namespace MentorBot
 {
-  public interface ITokenGenerator
+    // Interface for generating a secure token.
+    public interface ITokenGenerator
   {
     public string CreateToken();
   }
@@ -12,7 +13,8 @@ namespace MentorBot
   {
     public string CreateToken()
     {
-      return Base64UrlTextEncoder.Encode(RandomNumberGenerator.GetBytes(45));
+        // Create a random 45-byte token and encode it in a URL-safe format.
+        return Base64UrlTextEncoder.Encode(RandomNumberGenerator.GetBytes(45));
     }
   }
 }
