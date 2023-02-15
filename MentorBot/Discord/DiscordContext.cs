@@ -1,8 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using MentorBot.Discord;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -73,13 +70,11 @@ namespace MentorBot.Discord
                     _logger.Log(LogLevel.Debug, arg.Exception, arg.Message);
                     break;
             }
-            Console.WriteLine($"Log message received: {arg.Message}");
             return Task.CompletedTask;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            Console.WriteLine("Starting Discord context.");
             await Client.LoginAsync(TokenType.Bot, _options.Token);
             await Client.StartAsync();
             Channel = await Client.Rest.GetChannelAsync(_options.Channel) as ITextChannel;
@@ -87,7 +82,6 @@ namespace MentorBot.Discord
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            Console.WriteLine("Stopping Discord context.");
             await Client.StopAsync();
             await Client.LogoutAsync();
         }
@@ -103,7 +97,6 @@ namespace MentorBot.Discord
             {
                 throw new InvalidOperationException("channel not bound to discord context.");
             }
-            Console.WriteLine($"Sending message to channel {Channel.Name}.");
             var msg = await Channel.SendMessageAsync(embed: embed, options: new RequestOptions
             {
                 CancelToken = cancellationToken
@@ -145,46 +138,30 @@ namespace MentorBot.Discord
     }
 }
 
-public class DiscordHostedServiceProxy : IHostedService
+namespace Microsoft.Extensions.DependencyInjection
 {
-    private readonly DiscordContext _context;
+    using MentorBot.Discord;
+    using Microsoft.Extensions.Configuration;
 
-    public DiscordHostedServiceProxy(DiscordContext context)
+    public static class DiscordContextExtensions
     {
-        _context = context;
-    }
-
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        return _context.StartAsync(cancellationToken);
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return _context.StopAsync(cancellationToken);
-    }
-}
-
-public static class DiscordContextExtensions
-{
-    public static IServiceCollection AddDiscordContext(this IServiceCollection services, IConfiguration configuration)
-    {
-        var discordOptions = configuration.GetSection("Discord").Get<DiscordOptions>();
-        if (discordOptions == null)
+        public static IServiceCollection AddDiscordContext(this IServiceCollection services, IConfiguration config)
         {
-            throw new ArgumentException("DiscordOptions must be configured in appsettings.json.");
-        }
+            var discordContext = config.GetSection("Discord");
+            services.Configure<DiscordOptions>(discordContext);
+            var options = discordContext.Get<DiscordOptions>();
+            if (options?.UpdateTickets ?? false)
+            {
+                services.AddSingleton<DiscordContext>()
+                  .AddSingleton<IDiscordContext, DiscordContext>(o => o.GetRequiredService<DiscordContext>())
+                  .AddHostedService<DiscordHostedServiceProxy>()
+                  .AddHostedService<TicketDiscordProxyHost>()
+                  .AddTransient<ITicketDiscordProxy, TicketDiscordProxy>();
 
-        if (discordOptions.UpdateTickets)
-        {
-            services.AddSingleton<DiscordSocketClient>();
-            services.AddSingleton<IDiscordContext, DiscordContext>();
-            services.AddSingleton<IHostedService, DiscordContext>();
-            services.AddTransient<ITicketDiscordProxy, TicketDiscordProxy>();
-            services.AddHostedService<TicketDiscordProxyHost>();
-            services.AddHealthChecks().AddCheck<DiscordHealthCheck>("discord");
-        }
+                services.AddHealthChecks().AddCheck<DiscordHealthCheck>("discord");
+            }
 
-        return services;
+            return services;
+        }
     }
 }
